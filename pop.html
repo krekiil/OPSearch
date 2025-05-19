@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OPScenes | Главная</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+  <style>
+
+    .search-results {
+      margin: 20px auto;
+      background-color: #1E1E1E;
+      padding: 15px;
+      border-radius: 8px;
+      color: white;
+      max-width: 800px;
+      display: none;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    }
+
+    .search-result {
+      margin-bottom: 10px;
+      padding: 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .search-result:hover {
+      background-color: #2a2a2a;
+    }
+
+    .search-result .category-badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      margin-right: 8px;
+    }
+
+    .events-badge {
+      background-color: #6D28D9;
+    }
+
+    .characters-badge {
+      background-color: #1E40AF;
+    }
+
+    .highlight {
+      background-color: #ffcc00;
+      color: #000;
+      padding: 0 2px;
+      border-radius: 3px;
+    }
+
+    .search-container {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    #searchInput {
+      flex-grow: 1;
+      padding: 12px 15px;
+      border-radius: 4px;
+      border: none;
+      font-size: 16px;
+      background-color: #2A2A2A;
+      color: white;
+    }
+
+    .btn-search {
+      padding: 12px 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <nav class="navbar">
+      <div class="logo">
+        <a href="pop.html">
+          <img src="logo.png" alt="One Piece Logo">
+        </a>
+      </div>
+      <div class="nav-links">
+        <a href="events.html"><i class="fas fa-fire"></i> События</a>
+        <a href="characters.html"><i class="fas fa-users"></i> Персонажи</a>
+      </div>
+      <div class="auth-buttons" id="auth-buttons">
+        <a href="#" class="btn btn-login" id="login-btn"><i class="fas fa-sign-in-alt"></i> Вход</a>
+        <a href="#" class="btn btn-register" id="register-btn"><i class="fas fa-user-plus"></i> Регистрация</a>
+        <div class="user-profile" id="user-profile" style="display: none;">
+          <div class="user-avatar">
+            <i class="fas fa-user"></i>
+          </div>
+          <span class="username" id="username-display">Гость</span>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <div class="hero">
+    <h1>Найдите ключевые моменты One Piece</h1>
+    <div class="search-container">
+      <input type="text" id="searchInput" placeholder="Поиск по арке, эпизоду или персонажу..." 
+             onkeypress="if(event.key === 'Enter') loadDataAndSearch()">
+      <button class="btn btn-search" id="searchButton"><i class="fas fa-search"></i> Найти</button>
+    </div>
+    <div id="searchResults" class="search-results"></div>
+  </div>
+
+  <script src="search.json"></script>
+
+  <script>
+
+    function highlightText(text, query) {
+      if (!query) return text;
+      const regex = new RegExp(`(${query})`, 'gi');
+      return text.replace(regex, '<span class="highlight">$1</span>');
+    }
+
+    async function loadDataAndSearch() {
+      const query = document.getElementById('searchInput').value.toLowerCase().trim();
+      const resultsContainer = document.getElementById('searchResults');
+      
+      if (!query) {
+        resultsContainer.style.display = 'none';
+        return;
+      }
+
+      try {
+        const response = await fetch('data.json');
+        const data = await response.json();
+
+        const results = [];
+
+        data.events.forEach(event => {
+          const titleMatch = event.title.toLowerCase().includes(query);
+          const descMatch = event.description.toLowerCase().includes(query);
+          const arcMatch = event.arc && event.arc.toLowerCase().includes(query);
+          
+          if (titleMatch || descMatch || arcMatch) {
+            const highlightedTitle = highlightText(event.title, query);
+            const highlightedDesc = highlightText(event.description, query);
+            const highlightedArc = event.arc ? highlightText(event.arc, query) : '';
+            
+            results.push(`
+              <div class="search-result" onclick="window.location.href='events.html#${event.id || ''}'">
+                <span class="category-badge events-badge">Событие</span>
+                <strong>${highlightedTitle}</strong> — ${highlightedDesc}
+                <div class="search-meta">Серия ${event.episode} • Арка: ${highlightedArc}</div>
+              </div>
+            `);
+          }
+        });
+
+        data.characters.forEach(character => {
+          const nameMatch = character.name.toLowerCase().includes(query);
+          const descMatch = character.description.toLowerCase().includes(query);
+          
+          if (nameMatch || descMatch) {
+            const highlightedName = highlightText(character.name, query);
+            const highlightedDesc = highlightText(character.description, query);
+            
+            results.push(`
+              <div class="search-result" onclick="window.location.href='characters.html#${character.id || ''}'">
+                <span class="category-badge characters-badge">Персонаж</span>
+                <strong>${highlightedName}</strong> — ${highlightedDesc}
+              </div>
+            `);
+          }
+        });
+
+        if (results.length) {
+          resultsContainer.innerHTML = results.join('');
+          resultsContainer.style.display = 'block';
+        } else {
+          resultsContainer.innerHTML = '<p>Ничего не найдено. Попробуйте другой запрос.</p>';
+          resultsContainer.style.display = 'block';
+        }
+      } catch (error) {
+        console.error('Ошибка при загрузке данных:', error);
+        resultsContainer.innerHTML = '<p>Ошибка загрузки данных. Пожалуйста, попробуйте позже.</p>';
+        resultsContainer.style.display = 'block';
+      }
+    }
+
+    document.getElementById('searchButton').addEventListener('click', loadDataAndSearch);
+    document.getElementById('searchInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') loadDataAndSearch();
+    });
+
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.search-container') && !e.target.closest('.search-results')) {
+        document.getElementById('searchResults').style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>
